@@ -1,0 +1,498 @@
+
+/* ******************************** Q1 ******************************** */
+SELECT
+    `id`,
+    (
+        6371 *
+        acos(
+            cos( radians( :lat ) ) *
+            cos( radians( `lat` ) ) *
+            cos(
+                radians( `long` ) - radians( :long )
+            ) +
+            sin(radians(:lat)) *
+            sin(radians(`lat`))
+        )
+    ) `distance`
+FROM
+    `location`
+HAVING
+    `distance` < :distance
+ORDER BY
+    `distance`
+LIMIT
+    25
+/* ******************************** Q1 ******************************** */
+
+/* ******************************** Q2 ******************************** */
+$lat = “3.107685”; 
+$lon = “101.7624521”; 
+$sql=”SELECT (
+	(ACOS(
+		SIN($lat * PI() / 180) * 
+		SIN(lat * PI() / 180) + 
+		COS($lat * PI() / 180) * 
+		COS(lat * PI() / 180) * 
+		COS(($lon – lon) * PI() / 180)) * 
+		180 / PI()) * 60 * 1.1515) AS ‘distance’ 
+		FROM loc_coordinate HAVING ‘distance'<=’10’ ORDER BY ‘distance’ ASC”; 
+/* ******************************** Q2 ******************************** */
+
+/* ******************************** Q3 ******************************** */
+The cosine law is:	d = acos( sin(φ1)⋅sin(φ2) + cos(φ1)⋅cos(φ2)⋅cos(Δλ) ) ⋅ R
+where:	φ = latitude, λ = longitude (in radians)
+R = radius of earth
+d = distance between the points (in same units as R)
+Using this formula, the SQL query to select points within the bounding circle is:
+
+Select Id, Postcode, Lat, Lon,
+       acos(sin(:lat)*sin(radians(Lat)) + cos(:lat)*cos(radians(Lat))*cos(radians(Lon)-:lon)) * :R As D
+From MyTable
+Where acos(sin(:lat)*sin(radians(Lat)) + cos(:lat)*cos(radians(Lat))*cos(radians(Lon)-:lon)) * :R < :rad
+/* ******************************** Q3 ******************************** */
+
+/* ******************************** Q4 ******************************** */
+SELECT 
+  Latitude, 
+  Longitude 
+FROM 
+  (
+    SELECT 
+      Latitude, 
+      Longitude, 
+      (
+        6371 * ACOS(
+          COS(
+            RADIANS('22.607672')
+          ) * COS(
+            RADIANS(Latitude)
+          ) * COS(
+            RADIANS(Longitude) - RADIANS('88.36853')
+          ) + SIN(
+            RADIANS('22.607672')
+          )* SIN(
+            RADIANS(Latitude)
+          )
+        )
+      ) AS distance 
+    FROM 
+      bts 
+    HAVING 
+      distance < '7'
+  ) a
+/* ******************************** Q4 ******************************** */
+
+/* ******************************** Q5 ******************************** */
+DELIMITER $$
+
+CREATE FUNCTION calcDistance(lat FLOAT, lng FLOAT, pnt_lat FLOAT, pnt_lng FLOAT)
+    RETURNS FLOAT
+BEGIN
+
+    DECLARE dist FLOAT;
+    SET dist =
+          3959 * acos(
+                cos(radians(pnt_lat))
+                * cos(radians(lat))
+                * cos(radians(lng) - radians(pnt_lng))
+            + sin(radians(pnt_lat))
+                    * sin(radians(lat))
+          );
+
+    RETURN dist;
+
+END
+/* ******************************** Q5 ******************************** */
+
+/* ******************************** Q6 ******************************** */
+SELECT id, name, ( 6371 * acos( cos( radians(28.638753) ) * cos( radians( Lattitude ) ) * cos( radians( Longitude ) - radians(77.073803) ) + sin( radians(28.638753) ) * sin( radians( Lattitude ) ) ) ) AS distance 
+FROM areas 
+HAVING distance < 25 
+ORDER BY distance asc;
+/* ******************************** Q6 ******************************** */
+
+/* ******************************** Q7 ******************************** */
+<?php 
+
+/**
+ * Method to find the distance between 2 locations from its coordinates.
+ * 
+ * @param latitude1 LAT from point A
+ * @param longitude1 LNG from point A
+ * @param latitude2 LAT from point A
+ * @param longitude2 LNG from point A
+ * 
+ * @return Float Distance in Kilometers.
+ */
+function getDistanceBetweenPointsNew($latitude1, $longitude1, $latitude2, $longitude2, $unit = 'Mi') {
+    $theta = $longitude1 - $longitude2;
+    $distance = sin(deg2rad($latitude1)) * sin(deg2rad($latitude2)) + cos(deg2rad($latitude1)) * cos(deg2rad($latitude2)) * cos(deg2rad($theta));
+
+    $distance = acos($distance); 
+    $distance = rad2deg($distance); 
+    $distance = $distance * 60 * 1.1515;
+
+    switch($unit) 
+    { 
+        case 'Mi': break;
+        case 'Km' : $distance = $distance * 1.609344; 
+    }
+
+    return (round($distance,2)); 
+}
+?>
+/* ******************************** Q7 ******************************** */
+
+/* ******************************** Q8 ******************************** */
+A. Searching in Kilometers
+--- Where: 
+--- $LATITUDE = the latitude of the start point e.g 7.08594109039762;
+--- $LONGITUDE = the longitude of the start point e.g 286.95225338731285;
+--- $DISTANCE_KILOMETERS = your radius of search in Kilometers e.g 150
+
+SELECT * FROM (
+    SELECT *, 
+        (
+            (
+                (
+                    acos(
+                        sin(( $LATITUDE * pi() / 180))
+                        *
+                        sin(( `latitud_fieldname` * pi() / 180)) + cos(( $LATITUDE * pi() /180 ))
+                        *
+                        cos(( `latitud_fieldname` * pi() / 180)) * cos((( $LONGITUDE - `longitude_fieldname`) * pi()/180)))
+                ) * 180/pi()
+            ) * 60 * 1.1515 * 1.609344
+        )
+    as distance FROM `myTable`
+) myTable
+WHERE distance <= $DISTANCE_KILOMETERS
+LIMIT 15;
+/* ******************************** Q8 ******************************** */
+
+/* ******************************** Q9 ******************************** */
+B. Search in Miles
+--- Where: 
+--- $LATITUDE = the latitude of the start point e.g 7.08594109039762;
+--- $LONGITUDE = the longitude of the start point e.g 286.95225338731285;
+--- $DISTANCE_MILES = your radius of search in Miles e.g 150
+
+SELECT * FROM (
+    SELECT *, 
+        (
+            (
+                (
+                    acos(
+                        sin(( $LATITUDE * pi() / 180))
+                        *
+                        sin(( `latitud_fieldname` * pi() / 180)) + cos(( $LATITUDE * pi() /180 ))
+                        *
+                        cos(( `latitud_fieldname` * pi() / 180)) * cos((( $LONGITUDE - `longitude_fieldname`) * pi()/180)))
+                ) * 180/pi()
+            ) * 60 * 1.1515
+        )
+    as distance FROM `myTable`
+) myTable
+WHERE distance <= $DISTANCE_MILES
+LIMIT 15;
+/* ******************************** Q9 ******************************** */
+
+/* ******************************** Q10 ******************************** */
+<?php
+    $servername = "localhost";
+    $username = "root";
+    $password = "";
+    $dbname = "test";
+
+    // Create connection
+    $conn = new mysqli($servername, $username, $password, $dbname);
+    mysqli_set_charset($conn,"utf8");
+    // Check connection
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
+    }
+
+    // Bucaramanga Coordinates
+    $lat = 7.08594109039762;
+    $lon = 286.95225338731285;
+        
+    // Only show places within 100km
+    $distance = 150;
+
+    $lat = mysqli_real_escape_string($conn, $lat);
+    $lon = mysqli_real_escape_string($conn, $lon);
+    $distance = mysqli_real_escape_string($conn, $distance);
+
+    $query = <<<EOF
+    SELECT * FROM (
+        SELECT *, 
+            (
+                (
+                    (
+                        acos(
+                            sin(( $lat * pi() / 180))
+                            *
+                            sin(( `lat` * pi() / 180)) + cos(( $lat * pi() /180 ))
+                            *
+                            cos(( `lat` * pi() / 180)) * cos((( $lon - `lng`) * pi()/180)))
+                    ) * 180/pi()
+                ) * 60 * 1.1515 * 1.609344
+            )
+        as distance FROM `markers`
+    ) markers
+    WHERE distance <= $distance
+    LIMIT 15;
+EOF;
+
+    $result = $conn->query($query);
+    
+    if ($result->num_rows > 0) {
+        // output data of each row
+        while($row = $result->fetch_assoc()) {
+            echo $row["name"] . "<br>";
+        }
+    }
+
+    // Outputs:
+    // Barrancabermeja
+    // Cúcuta
+    // San Gil
+?>
+/* ******************************** Q10 ******************************** */
+
+/* ******************************** Q11 ******************************** */
+<?php
+namespace AppBundle\Entity;
+class LocationRepository extends \Doctrine\ORM\EntityRepository
+{
+    public function findClosest($lat, $lng) {
+        $qb = $this->createQueryBuilder('l');
+        $qb->addSelect('((ACOS(SIN(:lat * PI() / 180) * SIN(l.latitude * PI() / 180) + COS(:lat * PI() / 180) * COS(l.latitude * PI() / 180) * COS((:lng - l.longitude) * PI() / 180)) * 180 / PI()) * 60 * 1.1515) as HIDDEN distance');
+        $qb->orderBy('distance');
+        $qb->setParameter('lat', $lat);
+        $qb->setParameter('lng', $lng);
+        
+        return $qb->getQuery()->getResult();
+    }
+}
+/* ******************************** Q11 ******************************** */
+
+/* ******************************** Q12 ******************************** */
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+use App\Shop;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
+
+class ShopController extends Controller
+{
+
+    public function index(Request $request) {
+
+        $latitude       =       "28.418715";
+        $longitude      =       "77.0478997";
+
+        $shops          =       DB::table("shops");
+
+        $shops          =       $shops->select("*", DB::raw("6371 * acos(cos(radians(" . $latitude . "))
+                                * cos(radians(latitude)) * cos(radians(longitude) - radians(" . $longitude . "))
+                                + sin(radians(" .$latitude. ")) * sin(radians(latitude))) AS distance"));
+        $shops          =       $shops->having('distance', '<', 20);
+        $shops          =       $shops->orderBy('distance', 'asc');
+
+        $shops          =       $shops->get();
+
+        return view('shop-listing', compact("shops"));
+    }
+
+
+    // ------------ load shop view ---------------
+    public function create() {
+        return view('create-shop');
+    }
+
+
+    // ----------------- save shop detail ----------------------
+    public function store(Request $request) {
+
+        $request->validate([
+            "shop_name"     =>  "required",
+            "location"      =>  "required",
+            "filename"      =>  "required|mimes:jpeg,png,jpg,bmp|max:2048"
+        ]);
+
+
+        if($file            =       $request->file('file')) {
+            $image_name         =       time().'.'.$file->getClientOriginalExtension();
+            $target_path        =       public_path('/uploads/');
+
+            if($file->move($target_path, $image_name)) {
+                $dataArray      =       array (
+                    "shop_name"         =>      $request->shop_name,
+                    "address"           =>      $request->location,
+                    "description"       =>      $request->description,
+                    "latitude"          =>      $request->latitude,
+                    "longitude"         =>      $request->longitude,
+                    "image"             =>      ""
+                );
+
+                $shop           =       Shop::create($dataArray);
+
+                if(!is_null($shop)) {
+                    return back()->with("success", "Shop details saved successfully");
+                }
+            }
+        }
+    }
+}
+?>
+
+/* ******************************** *** ******************************** */
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Find Near By Location : Example Programming Fields</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  </head>
+  <body>
+
+    <div class="container mt-5">
+        <form action="{{ url('store-shop') }}" method="post" enctype="multipart/form-data ">
+            {{ csrf_field() }}
+            <div class="row">
+                <div class="col-xl-6 m-auto">
+                    <div class="card shadow">
+                        <div class="card-header bg-primary">
+                            <h5 class="card-title text-white mt-2"> Create Shop With Latitude and Longitude </h5>
+                        </div>
+                        <div class="card-body">
+
+                            {{-- print success message --}}
+                            @if(Session::has('success'))
+                                <div class="alert alert-success">
+                                    {{ Session::get('success') }}
+                                    @php
+                                        Session::forget('success');
+                                    @endphp
+                                </div>
+                            @endif
+
+                            <div class="form-group">
+                                <label for="shop_name"> Shop Name <span class="text-danger"> * </span>  </label>
+                                <input type="text" name="shop_name" class="form-control" id="shop_name" placeholder="Shop Name" value="{{ old('shop_name') }}">
+                                {!! $errors->first('shop_name', '<small class="text-danger">:message </small>') !!}
+                            </div>
+
+                            <div class="form-group">
+                                <label for="description"> Description  </label>
+                                <input type="text" name="description" class="form-control" id="description" placeholder="Description" value="{{ old('description') }}">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="description"> Location  </label>
+                                <input type="text" name="location" class="form-control" id="location" placeholder="Select Location" value="{{ old('location') }}">
+                                <input type="hidden" name="latitude" class="form-control" id="latitude" value="{{ old('latitude') }}">
+                                <input type="hidden" name="longitude" class="form-control" id="longitude" value={{ old('longitude') }}>
+                                {!! $errors->first('location', '<small class="text-danger">:message </small>') !!}
+                            </div>
+
+                            <div class="form-group">
+                                <label for="file"> Image </label>
+                                <input type="file" name="filename" id="filename" class="form-control">
+                                {!! $errors->first('file', '<small class="text-danger">:message </small>') !!}
+                            </div>
+                        </div>
+
+                        <div class="card-footer">
+                            <button type="submit" class="btn btn-success"> Save </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+
+    {{-- javascript code --}}
+   <script src="https://maps.google.com/maps/api/js?key=YOUR_KEY&libraries=places&callback=initAutocomplete" type="text/javascript"></script>
+
+   <script>
+       $(document).ready(function() {
+            $("#lat_area").addClass("d-none");
+            $("#long_area").addClass("d-none");
+       });
+   </script>
+
+   <script>
+       google.maps.event.addDomListener(window, 'load', initialize);
+
+       function initialize() {
+           var options = {
+             componentRestrictions: {country: "IN"}
+           };
+
+           var input = document.getElementById('location');
+           var autocomplete = new google.maps.places.Autocomplete(input, options);
+           autocomplete.addListener('place_changed', function() {
+               var place = autocomplete.getPlace();
+               $('#latitude').val(place.geometry['location'].lat());
+               $('#longitude').val(place.geometry['location'].lng());
+
+            // --------- show lat and long ---------------
+               $("#lat_area").removeClass("d-none");
+               $("#long_area").removeClass("d-none");
+           });
+       }
+    </script>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+  </body>
+</html>
+/* ******************************** Q12 ******************************** */
+
+/* ******************************** Q13 ******************************** */
+---
+METHOD 1
+
+This should roughly sort the items on distance in MySQL, and should work in SQLite.
+If you need to sort them preciser, you could try using the Pythagorean theorem (a^2 + b^2 = c^2) to get the exact distance.
+---
+SELECT *
+FROM table
+ORDER BY ((lat-$user_lat)*(lat-$user_lat)) + ((lng - $user_lng)*(lng - $user_lng)) ASC
+
+---
+METHOD 2
+---
+SELECT
+    id, (
+      6371 * acos (
+      cos ( radians($user_lat) )
+      * cos( radians( lat ) )
+      * cos( radians( lng ) - radians($user_lng) )
+      + sin ( radians($user_lat) )
+      * sin( radians( lat ) )
+    )
+) AS distance
+FROM table
+HAVING distance < 30
+ORDER BY distance
+LIMIT 0 , 20;
+/* ******************************** Q13 ******************************** */
+
+/* ******************************** Q14 ******************************** */
+SELECT `Name`, `LAT`, `LNG`
+ FROM   POI
+ WHERE  `Type` = 'A'
+ ORDER BY SQRT(POWER(myLAT - `LAT`), 2) + POWER(myLNG - `LNG`), 2)
+ LIMIT 10
+/* ******************************** Q14 ******************************** */
